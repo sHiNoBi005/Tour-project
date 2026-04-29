@@ -3,6 +3,7 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import expressMongoSanitize from '@exortek/express-mongo-sanitize';
+import hpp from 'hpp';
 
 import tourRouter from './routes/tourRoutes.js';
 import userRouter from './routes/userRoutes.js';
@@ -38,6 +39,20 @@ app.use(expressMongoSanitize());
 
 // Data Sanitization against XSS
 app.use(xssSanitize());
+
+// Prevent Parameter Pollution
+app.use(
+  hpp({
+    whitelist: [
+      'duration',
+      'ratingsQuantity',
+      'ratingsAverage',
+      'maxGroupSize',
+      'difficulty',
+      'price',
+    ],
+  }),
+);
 
 // Serving Static files
 app.use(express.static(`./public`));
