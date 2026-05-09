@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import Tour from './tourModel.js';
 
 const reviewSchema = new mongoose.Schema(
   {
@@ -32,11 +33,52 @@ const reviewSchema = new mongoose.Schema(
   },
 );
 
+reviewSchema.statics.calcAverageRatings = async function (tourId) {
+  const stats = await this.aggregate([
+    {
+      $match: { tour: tourId },
+    },
+    {
+      $group: {
+        _id: '$tour',
+        nrating: { $sum: 1 },
+        avgRating: { $avg: '$rating' },
+      },
+    },
+  ]);
+  if (stats.length > 0) {
+    await Tour.findByIdAndUpdate(tourId, {
+      ratingsQuantity: stats[0].nrating,
+      ratingsAverage: stats[0].avgRating,
+    });
+  } else {
+    await Tour.findByIdAndUpdate(tourId, {
+      ratingsQuantity: 0,
+      ratingsAverage: 4.5,
+    });
+  }
+};
+
+reviewSchema.post('save', function () {
+  //this points to current review
+  this.constructor.calcAverageRatings(this.tour);
+});
+
 reviewSchema.pre(/^find/, function () {
   this.populate({
     path: 'user',
     select: 'name photo',
   });
+});
+
+reviewSchema.pre(/^findOneAnd/, async function () {
+  this.r = await this.clone().findOne();
+});
+
+reviewSchema.post(/^findOneAnd/, async function () {
+  // this.findOne() won't work here, query already executed
+  if (!this.r) return;
+  await this.r.constructor.calcAverageRatings(this.r.tour);
 });
 
 const Review = mongoose.model('Review', reviewSchema);
