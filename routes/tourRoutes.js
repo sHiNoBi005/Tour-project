@@ -16,7 +16,12 @@ router
     authController.restrictTo('admin', 'lead-guide'),
     tourController.getMonthlyPlan,
   );
+
 router.route('/tour-stats').get(tourController.getTourStats);
+
+router
+  .route('/tours-within/:distance/center/:latlng/unit/:unit')
+  .get(tourController.getToursWithin);
 
 router
   .route('/top-5-cheap')
